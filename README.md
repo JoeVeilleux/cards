@@ -15,8 +15,6 @@ To run the application:
 # TODO
 This project is an early-work-in-progress. Planned future enhancements include:
 
-* Put the project under 'git' control and push it to GitHub.
-
 * Split up the application into separate files for HTML, CSS, and JavaScript (currently
 it's all in the HTML file).
 
