@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Cards</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="cards.css">
+    <script src="cards.js"></script>
+    <script>
+      /* Place functions here which are local to this page */
+      function initPage() {
+        console.log('initPage: Initializing cards');
+        // Create a deck of cards, and lay them out face-up on the canvas
+        for (let s=0; s < suiteSymbol.length; s++) {
+          for (let n=0; n < numSymbol.length; n++) {
+            addCard('card' + numSymbol[n] + suiteSymbol[s], n, s, n * 5 + s + 1, s * 15 + n + 1);
+          }
+        }
+        // Initially disable the Flip Next Card button (have to shuffle first)
+        document.getElementById('FlipNextCardButton').disabled = true;
+      }
+    </script>
+  </head>
+  <body onLoad="initPage()">
+    <div>
+      <button type="button" onClick="shuffle();">Shuffle</button>
+      <button type="button" id='FlipNextCardButton' onClick="flipNextCard();">Flip Next Card</button>
+    </div>
+    <div class="cardwindow" id='cardwindow'>
+      <!-- All contents are added dynamically (see initPage()). -->
+    </div>
+  </body>
+</html>
