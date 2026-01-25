@@ -1,5 +1,5 @@
 body {
-  border: 1px solid black;
+  background-color: deepskyblue;
 }
 
 button {
@@ -16,13 +16,14 @@ button {
   min-height: 1ch;
   text-align: center;
   line-height: 1.1;
-  background-color: blue;
+  background-color: dodgerblue;
   color: white;
   transition: 220ms all ease-in-out;
-  &:hover {
-    background-color: yellow;
-    color: black;
+  /* When the user hovers over a button, hilight it (but only if the button is enabled) */
+  &:hover:enabled {
+    background-color: lightskyblue;
   }
+  /* If the button is disabled, fuzz it out slightly */
   &:disabled {
     opacity: 0.6;
   }
@@ -30,16 +31,14 @@ button {
 
 .cardwindow {
   position: relative;
-  border: 1px solid dodgerblue;
-  background-color: deepskyblue;
   width: 100%;
   height: 95dvh;
 }
 
 .card {
   position: absolute;
-  top: 0vw;
-  left: 0vw;
+  top: 0vw; /* Will be set by code */
+  left: 0vw; /* Will be set by code */
   background-color: white;
   border: 1px solid black;
   border-radius: 4%;
