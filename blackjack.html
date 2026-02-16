@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Blackjack</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="cards.css">
+    <script src="cards.js"></script>
+    <script>
+      /* Place functions here which are local to this page */
+      
+      let numberOfPlayers = 3;
+      let hand = {};
+      let boardLayout = {
+        p0: {x: 70, y: 30, xOffset: 5, yOffset: 5},
+        p1: {x: 40, y: 30, xOffset: 5, yOffset: 5},
+        p2: {x: 10, y: 30, xOffset: 5, yOffset: 5},
+        d: {x: 25, y: 5, xOffset: 5, yOffset: 0}
+      }
+
+      function initPage() {
+        console.log('initPage: Initializing page...');
+        initCards();
+        // Initially disable the Flip Next Card button (user has to shuffle first)
+        document.getElementById('DealButton').disabled = true;
+      }
+      
+      function animateDealCard(player, cardNo, state, boardLayout) {
+        console.log(`animateDealCard: player=${player} cardNo=${cardNo} state=${state} boardLayout=${JSON.stringify(boardLayout)}`);
+        let nextCardId = shuffled.pop();
+        console.log(`animateDealCard: next card=${nextCardId}`);
+        hand[player].push(nextCardId);
+        console.log(`animateDealCard: hand=${JSON.stringify(hand)}`);
+        let x = boardLayout[player].x + boardLayout[player].xOffset * cardNo;
+        let y = boardLayout[player].y + boardLayout[player].yOffset * cardNo;
+        return animate({
+          elid: nextCardId,
+          drawFunc: drawFuncMoveTo,
+          duration: 500,
+          parms: {endX: x, endY: y}
+        })
+        .then(() => {
+          if (state == 'face-up') {
+            animateFlip(nextCardId, 100);
+          }
+        })
+        .then(() => {
+          z = cards.length - shuffled.length;
+          setZ(nextCardId, z);
+          console.log(`animateDealCard: Done dealing card for player=${player} cardNo=${cardNo}`);
+        })
+        ;    	  
+      }
+
+      async function bjDeal() {
+        console.log(`bjDeal: START`);
+        console.log(`bjDeal: boardLayout=${JSON.stringify(boardLayout)}`);
+        hand = { 'd': [] };
+        for (let p=0; p < numberOfPlayers; p++) {
+          hand['p'+p] = [];
+        }
+        if (shuffled.length == 0) {
+          alert("Shuffle the cards first!");
+        } else {
+      	  let cardsToDeal = [ ];
+      	  for (let c=0; c < 2; c++) {
+            for (let p=0; p < numberOfPlayers; p++) {
+              cardsToDeal.push({player: 'p'+p, cardNo: c, state: 'face-up'});
+            }
+            cardsToDeal.push({player: 'd', cardNo: c, state: (c == 0 ? 'face-up' : 'face-down')});
+      	  }
+          for (let c=0; c < cardsToDeal.length; c++) {
+            console.log(`bjDeal: About to animateDealCard(c=${JSON.stringify(cardsToDeal[c])})`);
+            await animateDealCard(cardsToDeal[c]['player'], cardsToDeal[c]['cardNo'], cardsToDeal[c]['state'], boardLayout);
+            console.log(`bjDeal: Finished animateDealCard(c=${JSON.stringify(cardsToDeal[c])})`);
+          }
+          ;
+        }
+        // If the 'shuffled' pile is empty, disable the 'Deal' button
+        if (shuffled.length == 0) {
+          document.getElementById('DealButton').disabled = true;
+        }
+        console.log(`bjDeal: END`);
+      }
+      
+    </script>
+  </head>
+  <body onLoad="initPage()">
+    <div>
+      <button type="button" onClick="shuffle(['DealButton'], 2, 5);">Shuffle</button>
+      <button type="button" id='DealButton' onClick="bjDeal();">Deal</button>
+    </div>
+    <div class="cardwindow" id='cardwindow'>
+      <!-- All contents are added dynamically (see initPage()). -->
+    </div>
+  </body>
+</html>

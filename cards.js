@@ -181,7 +181,7 @@ function animateMoveAllCardsToShuffledPositions(shuffled) {
     promises.push(animate({
       elid: shuffled[c],
       drawFunc: drawFuncMoveTo,
-      duration: 2000,
+      duration: 1000,
       parms: {endX: x * 5 + x + 1, endY: y * 15 + x + 1}
     }));
   }
@@ -233,8 +233,8 @@ function animateFlipAllCards(newState) {
   return Promise.all(promises);
 }
 
-function shuffle() {
-  console.log(`shuffle: START`);
+function shuffle(enableButtons=[], shuffledX=30, shuffledY=20) {
+  console.log(`shuffle: START: enableButtons=${enableButtons} shuffledX=${shuffledX} shuffledY=${shuffledY}`);
 
   // Shuffle the cards by deriving a list of the cards' ids and ramdomizing it
   shuffled = [];
@@ -251,15 +251,18 @@ function shuffle() {
   }
   console.log(`shuffle: shuffled list of cards: ${JSON.stringify(shuffled)}`);
   
-  animateMoveAllCardsToHomePositions('face-up')
-  .then(() => animateFlipAllCards())
+  animateMoveAllCardsToHomePositions()
+  .then(() => animateFlipAllCards('face-up'))
   .then(() => animateFlipAllCards('face-down'))
   .then(() => animateMoveAllCardsToShuffledPositions(shuffled))
-  .then(() => animateMoveAllCardsToStack(shuffled, 30, 20))
+  .then(() => animateMoveAllCardsToStack(shuffled, shuffledX, shuffledY))
+  .then(() => {
+    // Enable any buttons that are now OK to use (now that the deck is sorted)
+    for (b of enableButtons) {
+      document.getElementById(b).disabled = false;
+    }
+  })
   ;
-
-  // Enable the "Flip Next Card" button
-  document.getElementById('FlipNextCardButton').disabled = false;
   console.log(`shuffle: END`);
 }
 
