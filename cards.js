@@ -77,6 +77,13 @@ function addCard(elid, number, suite, posX, posY) {
   cards.push(newCard);
 }
 
+/** Get a card's current "state" (face-up or face-down) */
+function getCardState(elid) {
+  let el = document.getElementById(elid);
+  //console.log(`getCardState(${elid}): card state is: ${el.cardState}`);
+  return el.cardState;
+}
+
 /** Set a card's "state" (face-up or face-down) */
 function setCardState(elid, state) {
   //console.log(`setCardState(${elid}): target state=${state}`);
@@ -204,6 +211,15 @@ function animateMoveAllCardsToStack(shuffled, stackX, stackY) {
   }
   //console.log(`animateMoveAllCardsToStack: after moving all cards, promises.length=${promises.length}`);
   return Promise.all(promises);
+}
+
+function animateMoveCard(cardId, x, y, duration) {
+  return animate({
+    elid: cardId,
+    drawFunc: drawFuncMoveTo,
+    duration: duration,
+    parms: {endX: x, endY: y}
+  });
 }
 
 function animateFlip(elid, duration) {

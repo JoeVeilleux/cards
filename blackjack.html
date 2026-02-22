@@ -4,17 +4,38 @@
     <title>Blackjack</title>
     <meta charset="UTF-8">
     <link rel="stylesheet" href="cards.css">
+    <style>
+      /* Styles which are specific to this page (blackjack) */
+      button {
+        min-width: 0px; /* Override setting in cards.css */
+      }
+      .player-ui {
+        position: absolute;
+        /*top: 0vw; /* Will be set by code */
+        bottom: 0vw; /* Will be set by code */
+        left: 0vw; /* Will be set by code */
+        background-color: blue;
+        border: 1px solid black;
+        border-radius: 4%;
+        padding: 0.75%;
+        text-align: center;
+      }
+      .player-ui-text {
+        color: white;
+        font-size: 4ch;
+      }
+    </style>
     <script src="cards.js"></script>
     <script>
       /* Place functions here which are local to this page */
       
       let numberOfPlayers = 3;
-      let hand = {};
+      let handState = {};
       let boardLayout = {
-        p0: {x: 70, y: 30, xOffset: 5, yOffset: 5},
-        p1: {x: 40, y: 30, xOffset: 5, yOffset: 5},
-        p2: {x: 10, y: 30, xOffset: 5, yOffset: 5},
-        d: {x: 25, y: 5, xOffset: 5, yOffset: 0}
+        p1: {x: 70, y: 45, xOffset: 3, yOffset: 5},
+        p2: {x: 40, y: 45, xOffset: 3, yOffset: 5},
+        p3: {x: 10, y: 45, xOffset: 3, yOffset: 5},
+        d: {x: 25, y: 10, xOffset: 5, yOffset: 0}
       }
 
       function initPage() {
@@ -22,16 +43,20 @@
         initCards();
         // Initially disable the Flip Next Card button (user has to shuffle first)
         document.getElementById('DealButton').disabled = true;
+        // Initially hide the dealer and player UIs
+        for (p of ['p1', 'p2', 'p3', 'd']) {
+          document.getElementById(p + 'UI').hidden = true;
+        }
       }
       
-      function animateDealCard(player, cardNo, state, boardLayout) {
-        console.log(`animateDealCard: player=${player} cardNo=${cardNo} state=${state} boardLayout=${JSON.stringify(boardLayout)}`);
+      function animateDealCard(player, state, boardLayout) {
+        console.log(`animateDealCard: player=${player} state=${state} boardLayout=${JSON.stringify(boardLayout)}`);
         let nextCardId = shuffled.pop();
         console.log(`animateDealCard: next card=${nextCardId}`);
-        hand[player].push(nextCardId);
-        console.log(`animateDealCard: hand=${JSON.stringify(hand)}`);
-        let x = boardLayout[player].x + boardLayout[player].xOffset * cardNo;
-        let y = boardLayout[player].y + boardLayout[player].yOffset * cardNo;
+        let x = boardLayout[player].x + boardLayout[player].xOffset * handState[player].hand.length;
+        let y = boardLayout[player].y + boardLayout[player].yOffset * handState[player].hand.length;
+        handState[player].hand.push(nextCardId);
+        console.log(`animateDealCard: After adding card, handState=${JSON.stringify(handState)}`);
         return animate({
           elid: nextCardId,
           drawFunc: drawFuncMoveTo,
@@ -44,34 +69,49 @@
           }
         })
         .then(() => {
+          // FIXME: Need to improve 'z' handling: players' hands on top of dealer's, and dealer's down-card under up-card.
           z = cards.length - shuffled.length;
           setZ(nextCardId, z);
-          console.log(`animateDealCard: Done dealing card for player=${player} cardNo=${cardNo}`);
+          console.log(`animateDealCard: Done dealing card for player=${player}`);
         })
         ;    	  
       }
 
       async function bjDeal() {
-        console.log(`bjDeal: START`);
-        console.log(`bjDeal: boardLayout=${JSON.stringify(boardLayout)}`);
-        hand = { 'd': [] };
-        for (let p=0; p < numberOfPlayers; p++) {
-          hand['p'+p] = [];
+        console.log(`bjDeal: START boardLayout=${JSON.stringify(boardLayout)} handState=${JSON.stringify(handState)}`);
+        // Clean up from previous hand (if any)
+        for (p of ['p1', 'p2', 'p3', 'd']) {
+          // Hide the player's UI
+          elUI = document.getElementById(p + 'UI');
+          elUI.hidden = true;
+          if (Object.hasOwn(handState, p)) {
+            for (c of handState[p].hand) {
+              console.log(`bjDeal: Moving player=${p} card=${c} to discard pile.`);
+              if (getCardState(c) == 'face-up') {
+            	await animateFlip(c, 100);
+              }
+              await animateMoveCard(c, 80 + Math.random() * 2, 0 + Math.random() * 3, 100);
+            }
+          }
+        }
+        // Initialize 'handState' to indicate the beginning of a new hand
+        handState = { handPhase: 1, isHandFinished: false, 'd': { hand: [] } };
+        for (let p=1; p <= numberOfPlayers; p++) {
+          handState['p'+p] = { hand: []} ;
         }
         if (shuffled.length == 0) {
           alert("Shuffle the cards first!");
         } else {
+          // Set up a list of 'cards-to-deal' indicating what order and how many cards to deal
       	  let cardsToDeal = [ ];
       	  for (let c=0; c < 2; c++) {
-            for (let p=0; p < numberOfPlayers; p++) {
-              cardsToDeal.push({player: 'p'+p, cardNo: c, state: 'face-up'});
+            for (let p=1; p <= numberOfPlayers; p++) {
+              cardsToDeal.push({player: 'p'+p, state: 'face-up'});
             }
-            cardsToDeal.push({player: 'd', cardNo: c, state: (c == 0 ? 'face-up' : 'face-down')});
+            cardsToDeal.push({player: 'd', state: (c == 0 ? 'face-up' : 'face-down')});
       	  }
           for (let c=0; c < cardsToDeal.length; c++) {
-            console.log(`bjDeal: About to animateDealCard(c=${JSON.stringify(cardsToDeal[c])})`);
-            await animateDealCard(cardsToDeal[c]['player'], cardsToDeal[c]['cardNo'], cardsToDeal[c]['state'], boardLayout);
-            console.log(`bjDeal: Finished animateDealCard(c=${JSON.stringify(cardsToDeal[c])})`);
+            await animateDealCard(cardsToDeal[c]['player'], cardsToDeal[c]['state'], boardLayout);
           }
           ;
         }
@@ -79,7 +119,154 @@
         if (shuffled.length == 0) {
           document.getElementById('DealButton').disabled = true;
         }
+        console.log(`bjDeal: handState=${JSON.stringify(handState)}`);
+        bjDoNextMove();
         console.log(`bjDeal: END`);
+      }
+      
+      async function bjDoNextMove() {
+        console.log(`bjDoNextMove: START boardLayout=${JSON.stringify(boardLayout)} handState=${JSON.stringify(handState)} numberOfPlayers=${numberOfPlayers}`);
+        if (handState.handPhase <= numberOfPlayers) {
+          console.log(`bjDoNextMove: Player ${handState.handPhase}'s turn`);
+          elUI = document.getElementById('p' + handState.handPhase + 'UI');
+          elUI.hidden = false;
+          elUI.style.left = boardLayout['p' + handState.handPhase].x + '%';
+          elUI.style.bottom = (100 - boardLayout['p' + handState.handPhase].y + 1) + '%';
+          total = getHandTotal('p' + handState.handPhase);
+          console.log(`bjDoNextMove: getHandTotal(p${handState.handPhase}) returned: ${JSON.stringify(total)}`);
+          handState['p' + handState.handPhase].total = total;
+          elUI.querySelector('#Total').textContent = total.totalStr;
+          elUI.querySelector('#Result').textContent = '';
+          hideButtons('p' + handState.handPhase, false);
+          // If player has broken, go on to the next player (as though player had selected 'Stand')
+          if (total.handTotal > 21) {
+        	bjStand();
+          }
+        } else if (handState.handPhase == (numberOfPlayers + 1)) {
+          console.log(`bjDoNextMove: Dealer's turn`);
+          // Flip over dealer's down card
+          if (getCardState(handState['d'].hand[1]) == 'face-down') {
+            await animateFlip(handState['d'].hand[1], 100);
+          }
+          // Reveal the dealer's total
+          elUI = document.getElementById('dUI');
+          elUI.hidden = false;
+          elUI.style.left = boardLayout['d'].x + '%';
+          elUI.style.bottom = (100 - boardLayout['d'].y + 1) + '%';
+          let total = getHandTotal('d');
+          console.log(`bjDoNextMove: getHandTotal(d) returned: ${JSON.stringify(total)}`);
+          handState['d'].total = total;
+          elUI.querySelector('#Total').textContent = total.totalStr;
+          // See if the dealer is done playing their hand
+          if (total.handTotal >= 17) {
+            console.log(`bjDoNextMove: Dealer has ${total.handTotal}. Dealer stands. Dealer is done playing hand.`);
+            handState.handPhase++;
+          } else {
+            console.log(`bjDoNextMove: Dealer has ${total.handTotal}. Dealer hits.`);
+            await animateDealCard('d', 'face-up', boardLayout);
+          }
+          bjDoNextMove();
+        } else {
+          console.log(`bjDoNextMove: hand is finished; show hand results`);
+          let dealerHandTotal = handState['d'].total.handTotal;
+          console.log(`bjDoNextMove: Dealer has ${dealerHandTotal}.`);
+          for (p of ['p1', 'p2', 'p3']) {
+        	let el = document.querySelector('#' + p + 'UI #Result');
+        	console.log(`bjDoNextMove: Setting text of element ${el.id}`);
+        	let result = '';
+        	let playerHandTotal = handState[p].total.handTotal;
+            console.log(`bjDoNextMove: Player ${p} has ${playerHandTotal}.`);
+            if (playerHandTotal > 21) {
+              // If the player broke, then they lose no matter what the dealer did
+              result = 'LOSES!';
+            } else if (dealerHandTotal > 21) {
+              // Player DID NOT break, and dealer DID break, so player wins (regardless of their total)
+              result = 'WINS!';
+            } else {
+              // Neither dealer nor player broke; whose score was higher?
+              if (playerHandTotal < dealerHandTotal) {
+                result = 'LOSES!';
+              } else if (playerHandTotal == dealerHandTotal) {
+                result = 'PUSH';
+              } else {
+                result = 'WINS!';
+              }
+            }
+        	el.textContent = result;
+          }
+          // TODO
+          return;
+        }
+        console.log(`bjDoNextMove: END`);
+      }
+      
+      function hideButtons(p, hidden) {
+    	let disp = hidden ? 'none' : 'inline-flex';
+        document.querySelectorAll('#' + p + 'UI button').forEach((e) => {
+          console.log(`hideButtons: marking ${e.type} element '${e.id}' style display=${disp}.`);
+          e.style.display = disp;
+        });
+      }
+      
+      function getHandTotal(player) {
+        let total = 0;
+        let hasAce = false;
+        let nCards = handState[player].hand.length;
+        for (c of handState[player].hand) {
+          console.log(`getHandTotal: Examining card: ${c} total=${total}`);
+          let v = getValueFromCardId(c);
+          hasAce = hasAce || (v == 1);
+          total += v;
+          console.log(`getHandTotal: Added card value=${v}, now total=${total}`);
+        }
+        handTotal =
+          (hasAce && total <= 11)
+          ? total + 10
+          : total
+        ;
+        // Build the human-understandable version of the total
+        let totalStr = '';
+        if (nCards == 2 && hasAce && total == 11) {
+          totalStr = 'Blackjack!';
+        } else if (hasAce && total <= 11) {
+          totalStr = total + ' or ' + (total + 10);
+        } else if (total > 21) {
+          totalStr = total + ' - BREAK!';
+        } else {
+          totalStr = total + '';
+        }
+        return { handTotal: handTotal, total: total, totalStr: totalStr, hasAce: hasAce };
+      }
+      
+      function getValueFromCardId(cardId) {
+    	// cardId example: 'card2♣'
+    	// Literal 'card' followed by the value (number or symbol) followed by a suite-symbol
+    	let v = cardId.slice(4, -1);
+        console.log(`getValueFromCardId: cardId=${cardId} v=${v}`);
+        if (v == "A") {
+          return 1;
+        } else if (["10", "J", "Q", "K"].includes(v)) {
+          return 10;
+        } else {
+          return parseInt(v);
+        }
+      }
+      
+      async function bjHit(p) {
+        console.log(`bjHit: START: p=${p}`);
+        await animateDealCard(p, 'face-up', boardLayout);
+        bjDoNextMove();
+        console.log(`bjHit: END`);
+      }
+      
+      async function bjStand() {
+        console.log(`bjStand: START`);
+        // Hide the current player's UI buttons
+        hideButtons('p' + handState.handPhase, true);
+        // Go on to the next player
+        handState.handPhase++;
+        bjDoNextMove();
+        console.log(`bjStand: END`);
       }
       
     </script>
@@ -90,7 +277,40 @@
       <button type="button" id='DealButton' onClick="bjDeal();">Deal</button>
     </div>
     <div class="cardwindow" id='cardwindow'>
-      <!-- All contents are added dynamically (see initPage()). -->
+      <!-- Cards are added dynamically (see initPage()). -->
+      <div class='player-ui' id='dUI'>
+        <div class='player-ui-text'>
+          <span>Dealer has </span>
+          <span id='Total'>NN</span>
+        </div>
+      </div>
+      <div class='player-ui' id='p1UI'>
+        <div class='player-ui-text'>
+          <span>Player 1 has </span>
+          <span id='Total'>NN</span>
+        </div>
+        <div class='player-ui-text' id='Result'>XX</div>
+        <button type="button" id='Hit' onClick="bjHit('p1');">Hit</button>
+        <button type="button" id='Stand' onClick="bjStand();">Stand</button>
+      </div>
+      <div class='player-ui' id='p2UI'>
+        <div class='player-ui-text'>
+          <span>Player 2 has </span>
+          <span id='Total'>NN</span>
+        </div>
+        <div class='player-ui-text' id='Result'>XX</div>
+        <button type="button" id='Hit' onClick="bjHit('p2');">Hit</button>
+        <button type="button" id='Stand' onClick="bjStand();">Stand</button>
+      </div>
+      <div class='player-ui' id='p3UI'>
+        <div class='player-ui-text'>
+          <span>Player 3 has </span>
+          <span id='Total'>NN</span>
+        </div>
+        <div class='player-ui-text' id='Result'>XX</div>
+        <button type="button" id='Hit' onClick="bjHit('p3');">Hit</button>
+        <button type="button" id='Stand' onClick="bjStand();">Stand</button>
+      </div>
     </div>
   </body>
 </html>
